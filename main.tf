@@ -1,3 +1,10 @@
+terraform {
+  required_providers {
+    kubernetes = "~> 1.13.2"
+  }
+}
+
+
 resource "kubernetes_namespace" "jenkins-namespace" {
   metadata {
     name = "jenkins"
@@ -26,7 +33,7 @@ resource "kubernetes_persistent_volume" "jenkins-volume" {
 
 resource "kubernetes_persistent_volume_claim" "jenkins-pvc" {
   metadata {
-    name = "jenkins-pvc"
+    name      = "jenkins-pvc"
     namespace = "jenkins"
   }
   spec {
@@ -46,7 +53,7 @@ resource "kubernetes_persistent_volume_claim" "jenkins-pvc" {
 
 resource "kubernetes_service_account" "jenkins-service-account" {
   metadata {
-    name = "jenkins"
+    name      = "jenkins"
     namespace = "jenkins"
   }
 }
@@ -54,27 +61,27 @@ resource "kubernetes_service_account" "jenkins-service-account" {
 
 resource "kubernetes_role_binding" "jenkens-service-account-binding" {
   metadata {
-    name = "jenkins-service-account-rolebinding"
+    name      = "jenkins-service-account-rolebinding"
     namespace = "jenkins"
   }
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-    kind = "ClusterRole"
-    name = "admin"
+    kind      = "ClusterRole"
+    name      = "admin"
   }
   subject {
-    kind = "ServiceAccount"
-    name = "jenkins"
+    kind      = "ServiceAccount"
+    name      = "jenkins"
     namespace = "jenkins"
   }
 }
 
 resource "kubernetes_secret" "jenkins-service-account-token" {
   metadata {
-    name = "jenkins-service-account-token"
+    name      = "jenkins-service-account-token"
     namespace = "jenkins"
     annotations = {
-      "kubernetes.io/service-account.name": "jenkins"
+      "kubernetes.io/service-account.name" : "jenkins"
     }
   }
   type = "kubernetes.io/service-account-token"
@@ -83,55 +90,96 @@ resource "kubernetes_secret" "jenkins-service-account-token" {
   ]
 }
 
+
+resource "kubernetes_config_map" "jenkins-pre-install-script" {
+  metadata {
+    name      = "jenkins-pre-install-configmap"
+    namespace = "jenkins"
+  }
+  data = {
+    "jenkins-pre-install.sh" = file("jenkins-pre-install.sh")
+  }
+}
+
 resource "kubernetes_deployment" "jenkins-deployment" {
   metadata {
-    name = "jenkins"
+    name      = "jenkins"
     namespace = "jenkins"
   }
   spec {
     replicas = 1
     selector {
       match_labels = {
-        app:"jenkins"
+        app : "jenkins"
       }
     }
+
     template {
       metadata {
         labels = {
-          app: "jenkins"
+          app : "jenkins"
         }
       }
 
       spec {
         service_account_name = "jenkins"
+
+        init_container {
+          name  = "jenkins-pre-install"
+          image = "jenkins/jenkins:lts"
+
+          command = ["./var/init-scripts/jenkins-pre-install.sh"]
+          args    = ["configuration-as-code:1.44"]
+
+
+          volume_mount {
+            name       = "jenkins-pre-install"
+            mount_path = "/var/init-scripts"
+          }
+
+          volume_mount {
+            name       = "jenkins-home-volume"
+            mount_path = "/var/jenkins_home"
+          }
+        }
+
         container {
-          name = "jenkins"
+          name  = "jenkins"
           image = "jenkins/jenkins:lts"
 
           port {
-            name = "http-port"
+            name           = "http-port"
             container_port = 8080
           }
           port {
-            name = "jnlp-port"
+            name           = "jnlp-port"
             container_port = 50000
           }
 
           env {
-            name = "JAVA_OPTS"
+            name  = "JAVA_OPTS"
             value = "-Djenkins.install.runSetupWizard=false"
           }
 
           volume_mount {
             mount_path = "/var/jenkins_home"
-            name = "jenkins-home-volume"
+            name       = "jenkins-home-volume"
           }
 
           volume_mount {
             mount_path = "/var/run/secrets/kubernetes.io/serviceaccount"
-            name = "jenkins-service-account-secret"
+            name       = "jenkins-service-account-secret"
           }
         }
+
+        volume {
+          name = "jenkins-pre-install"
+          config_map {
+            name = "jenkins-pre-install-configmap"
+            default_mode = "0755"
+          }
+        }
+
         volume {
           name = "jenkins-home-volume"
           persistent_volume_claim {
@@ -150,6 +198,7 @@ resource "kubernetes_deployment" "jenkins-deployment" {
     }
   }
   depends_on = [
+    kubernetes_config_map.jenkins-pre-install-script,
     kubernetes_persistent_volume_claim.jenkins-pvc,
     kubernetes_secret.jenkins-service-account-token
   ]
@@ -158,17 +207,17 @@ resource "kubernetes_deployment" "jenkins-deployment" {
 resource "kubernetes_service" "jenkins-service" {
   metadata {
     namespace = "jenkins"
-    name = "jenkins"
+    name      = "jenkins"
   }
   spec {
     type = "NodePort"
     port {
-      port = 8080
+      port        = 8080
       target_port = "8080"
     }
 
     selector = {
-      app: "jenkins"
+      app : "jenkins"
     }
   }
 }
