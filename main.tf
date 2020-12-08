@@ -16,6 +16,7 @@ resource "kubernetes_persistent_volume" "jenkins-volume" {
     name = "jenkins-volume"
   }
   spec {
+    storage_class_name = "jenkins-storage"
     access_modes = [
       "ReadWriteMany"
     ]
@@ -37,6 +38,7 @@ resource "kubernetes_persistent_volume_claim" "jenkins-pvc" {
     namespace = "jenkins"
   }
   spec {
+    storage_class_name = "jenkins-storage"
     access_modes = [
       "ReadWriteMany"
     ]
@@ -45,6 +47,7 @@ resource "kubernetes_persistent_volume_claim" "jenkins-pvc" {
         storage = "10Gi"
       }
     }
+    volume_name = "jenkins-volume"
   }
   depends_on = [
     kubernetes_persistent_volume.jenkins-volume

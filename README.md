@@ -19,14 +19,10 @@ For local development you must install the following requisites. See [Deploy](#d
 ### Prerequisites
 First you need to install a local kubernetes cluster. You can use KIND. Follow the  [install instructtions](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) to provide the tool on you local machine. Then create the cluster following the [Kind - Ingress](https://kind.sigs.k8s.io/docs/user/ingress/) tutorial. 
 
-Create a folder to use in the extraMounts configuration (for volumes):
-```sh
-mkdir /usr/local/share/kind
-``` 
-
-Create the cluster:
-```sh
-cat <<EOF | kind create cluster --config=-
+Create the cluster. Change the KIND_VOLUMES_PATH var accordingly your need:
+```sh 
+KIND_VOLUMES_PATH=$HOME/kind-volumes; mkdir -p $KIND_VOLUMES_PATH \
+&& cat <<EOF | kind create cluster --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -45,7 +41,7 @@ nodes:
     hostPort: 443
     protocol: TCP
   extraMounts:
-  - hostPath: /usr/local/share/kind
+  - hostPath: $KIND_VOLUMES_PATH
     containerPath: /data
 EOF
 ```
