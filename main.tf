@@ -20,7 +20,7 @@ resource "kubernetes_persistent_volume" "jenkins-volume" {
       "ReadWriteMany"
     ]
     capacity = {
-      storage = "20Gi"
+      storage = "10Gi"
     }
 
     persistent_volume_source {
@@ -175,7 +175,7 @@ resource "kubernetes_deployment" "jenkins-deployment" {
         volume {
           name = "jenkins-pre-install"
           config_map {
-            name = "jenkins-pre-install-configmap"
+            name         = "jenkins-pre-install-configmap"
             default_mode = "0755"
           }
         }
