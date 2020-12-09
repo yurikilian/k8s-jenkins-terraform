@@ -8,11 +8,9 @@
 
 
 ## About <a name = "about"></a>
-
 Terraform boilerplate Jenkins deployment on top of Kubernetes. No helm.
 
-
-## Development <a name = "dev"></a>Comprehension Exercises Week 3 Part 1
+## Development <a name = "dev"></a>
 
 For local development you must install the following requisites. See [Deploy](#deploy) for notes on how to deploy the project on a live system.
 
